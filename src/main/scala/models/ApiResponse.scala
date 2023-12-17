@@ -1,6 +1,6 @@
 package models
 
-final case class ApiResponse(pagination: Pagination, country: List[Country])
+final case class ApiResponse(pagination: Pagination, countries: Seq[Country])
 
 final case class Pagination(
     page: Int,
@@ -8,7 +8,14 @@ final case class Pagination(
     perPage: Int,
     total: Int
 )
-final case class CountrySubInfo(id: String, iso2code: String, value: String)
+
+final case class PaginationResponse(pagination: Pagination)
+
+final case class CountryResponse(countries: Seq[Country])
+
+final case class CountryKeyAndName(key: String, name:String)
+
+final case class CountryKeyAndNameResponse(countries: Seq[CountryKeyAndName])
 
 final case class Country(
     id: String,
@@ -22,3 +29,4 @@ final case class Country(
     incomeLevel: CountrySubInfo,
     lendingType: CountrySubInfo
 )
+final case class CountrySubInfo(id: String, iso2code: String, value: String)

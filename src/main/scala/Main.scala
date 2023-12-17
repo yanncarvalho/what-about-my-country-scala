@@ -1,6 +1,9 @@
 import apis.ExternalApi
-import models.ApiResponse
+import models.{ApiResponse, CountryKeyAndNameResponse, CountryResponse}
 import utils.JsonUnmarshal.given
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 @main def main(): Unit =
-  val result = ExternalApi.getRequestWBankAPI[ApiResponse]
-  println(result)
+  val result = ExternalApi.getKeyAndNameFromNet
+  result.foreach(println)

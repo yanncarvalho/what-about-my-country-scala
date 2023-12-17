@@ -3,27 +3,42 @@ package apis
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
+import models.{CountryKeyAndName, CountryKeyAndNameResponse, PaginationResponse}
 import spray.json.*
-import scala.concurrent.duration.*
+import utils.JsonUnmarshal.given
+
+import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
 object ExternalApi:
+  given system: ActorSystem                        = ActorSystem()
+  given executionContext: ExecutionContextExecutor = system.dispatcher
 
-  def getRequestWBankAPI[T](using reader: RootJsonReader[T]): T =
-    requestWBankAPI[T]("api.worldbank.org/v2/country", "BR", 1)
+  def getKeyAndNameFromNet: Seq[CountryKeyAndName] =
+    val resp = getRequestWBankAPI[CountryKeyAndNameResponse](
+      "api.worldbank.org/v2/",
+      Seq("country")
+    )
+    resp.flatMap(Await.result(_, Duration.Inf).countries)
+
+  private def getRequestWBankAPI[T](apiUrlBase: String, requests: Seq[String])(
+      using reader: RootJsonReader[T]
+  ): Seq[Future[T]] =
+    requests.map { req =>
+      requestWBankAPI[PaginationResponse](apiUrlBase, req, perPage = 1)
+        .map[Int](_.pagination.total)
+        .flatMap[T](requestWBankAPI[T](apiUrlBase, req, _))
+    }
 
   private def requestWBankAPI[T](
       baseUrl: String,
       request: String,
-      perPage: Integer
-  )(using reader: RootJsonReader[T]): T =
-    given system: ActorSystem = ActorSystem()
-
-    given executionContext: ExecutionContextExecutor = system.dispatcher
+      perPage: Int
+  )(using reader: RootJsonReader[T]): Future[T] =
 
     val req =
       Get(uri = s"https://$baseUrl/$request?format=json&per_page=$perPage")
-    val result = Http()
+    Http()
       .singleRequest(req)
       .flatMap(res =>
         if res.status.isSuccess() then
@@ -35,5 +50,3 @@ object ExternalApi:
             RuntimeException(s"Request failed with status: ${res.status}")
           )
       )
-
-    Await.result(result, 10.minutes)
