@@ -1,25 +1,8 @@
 package utils
 
-import models.{
-  ApiResponse,
-  Country,
-  CountryKeyAndName,
-  CountryKeyAndNameResponse,
-  CountryResponse,
-  CountrySubInfo,
-  Pagination,
-  PaginationResponse
-}
-import spray.json.{
-  DefaultJsonProtocol,
-  JsArray,
-  JsNumber,
-  JsString,
-  JsValue,
-  JsonFormat,
-  RootJsonFormat,
-  deserializationError
-}
+import models.{ApiResponse, Country, CountryKeyAndName, CountryKeyAndNameResponse, CountryResponse, CountrySubInfo, Pagination, PaginationResponse}
+import utils.extensions.ExtensionCountry.isValidCountry
+import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsObject, JsNumber, JsString, JsValue, JsonFormat, RootJsonFormat, deserializationError}
 
 object JsonUnmarshal extends DefaultJsonProtocol:
 
@@ -51,10 +34,17 @@ object JsonUnmarshal extends DefaultJsonProtocol:
     def read(value: JsValue): ApiResponse =
       value match
         case JsArray(Vector(pagination, countries)) =>
-          ApiResponse(
-            pagination.convertTo[Pagination],
-            countries.convertTo[Seq[Country]]
-          )
+          val countriesFiltered = countries
+            .asInstanceOf[JsArray]
+            .elements
+            .withFilter(_.asJsObject.isValidCountry)
+            .map(_.convertTo[Country])
+          if countriesFiltered.isEmpty then throw DeserializationException("No Countries found")
+          else
+            ApiResponse(
+              pagination.convertTo[Pagination],
+              countriesFiltered
+            )
         case err => deserializationError(s"Api Response expected $err")
 
     def write(c: ApiResponse): JsValue = ???
@@ -77,45 +67,32 @@ object JsonUnmarshal extends DefaultJsonProtocol:
     def read(value: JsValue): Country =
       value.asJsObject
         .getFields(
-          "id",
           "iso2Code",
           "name",
           "capitalCity",
           "longitude",
           "latitude",
-          "adminregion",
-          "lendingType",
           "region",
           "incomeLevel"
         ) match
 
         case Seq(
-              JsString(id),
               JsString(iso2Code),
               JsString(name),
               JsString(capitalCity),
               JsString(longitude),
               JsString(latitude),
-              adminRegion,
-              lendingType,
-              region,
-              incomeLevel
+              JsObject(region),
+              JsObject(incomeLevel)
             ) =>
-          val infoRegion      = region.convertTo[CountrySubInfo];
-          val infoLendingType = lendingType.convertTo[CountrySubInfo];
-          val infoIncomeLevel = incomeLevel.convertTo[CountrySubInfo];
-          val infoAdminRegion = adminRegion.convertTo[CountrySubInfo];
           Country(
-            id = id,
             iso2Code = iso2Code,
             name = name,
             capitalCity = capitalCity,
             longitude = longitude,
             latitude = latitude,
-            region = infoRegion,
-            adminRegion = infoAdminRegion,
-            incomeLevel = infoIncomeLevel,
-            lendingType = infoLendingType
+            region = region("value").toString,
+            incomeLevel = incomeLevel("value").toString
           )
         case err => deserializationError(s"Country expected $err")
 
@@ -126,7 +103,13 @@ object JsonUnmarshal extends DefaultJsonProtocol:
     def read(value: JsValue): CountryKeyAndNameResponse =
       value match
         case JsArray(Vector(_, countries)) =>
-          CountryKeyAndNameResponse(countries.convertTo[Seq[CountryKeyAndName]])
+          val countriesFiltered = countries
+            .asInstanceOf[JsArray]
+            .elements
+            .withFilter(_.asJsObject.isValidCountry)
+            .map(_.convertTo[CountryKeyAndName])
+          if countriesFiltered.isEmpty then throw DeserializationException("No Countries found")
+          else CountryKeyAndNameResponse(countriesFiltered)
 
         case err => deserializationError(s"Api Response expected $err")
     def write(c: CountryKeyAndNameResponse): JsValue = ???

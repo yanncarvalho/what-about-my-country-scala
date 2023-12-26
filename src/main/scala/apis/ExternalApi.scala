@@ -3,23 +3,22 @@ package apis
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
-import models.{CountryKeyAndName, CountryKeyAndNameResponse, PaginationResponse}
+import models.{Country, CountryKeyAndName, CountryKeyAndNameResponse, CountryResponse, PaginationResponse}
 import spray.json.*
 import utils.JsonUnmarshal.given
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object ExternalApi:
   given system: ActorSystem                        = ActorSystem()
   given executionContext: ExecutionContextExecutor = system.dispatcher
 
-  def getKeyAndNameFromNet: Seq[CountryKeyAndName] =
+  def getKeyAndNameFromNet: Future[Seq[CountryKeyAndName]] =
     val resp = getRequestWBankAPI[CountryKeyAndNameResponse](
       "api.worldbank.org/v2/",
       Seq("country")
     )
-    resp.flatMap(Await.result(_, Duration.Inf).countries)
+    resp.head.map(_.countries)
 
   private def getRequestWBankAPI[T](apiUrlBase: String, requests: Seq[String])(
       using reader: RootJsonReader[T]
@@ -50,3 +49,10 @@ object ExternalApi:
             RuntimeException(s"Request failed with status: ${res.status}")
           )
       )
+  def getFromNet(key: String): Future[Country] = {
+      val resp = getRequestWBankAPI[CountryResponse](
+        "api.worldbank.org/v2/",
+        Seq(s"country/$key")
+      )
+      resp.head.map(_.countries).map(_.head)
+   }
