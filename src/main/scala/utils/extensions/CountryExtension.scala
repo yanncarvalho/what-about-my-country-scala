@@ -3,7 +3,7 @@ package utils.extensions
 import models.Country
 import spray.json.{JsObject, JsString, JsValue}
 
-object ExtensionCountry:
+object CountryExtension:
   extension (countryJs: JsObject)
     def isValidCountry: Boolean =
 
@@ -34,3 +34,22 @@ object ExtensionCountry:
             jsValue.asJsObject.fields.getOrElse("value", JsString("")).toString
           else ""
         case None => ""
+
+  extension (str: String)
+    def sanitizeString: String =
+
+      val rule: (String => String) = s => s.replaceAll("\\s*[SAR]*\\s*,.*", "")
+      val exceptions: Map[String, String] = Map(
+        "Congo, Dem. Rep." -> "Democratic Republic of the Congo",
+        "Congo, Rep."      -> "Republic of the Congo",
+        "Korea, Dem. People's Rep." -> "Democratic People's Republic of Korea (North Korea)",
+        "Korea, Rep."       -> "Republic of Korea (South Korea)",
+        "Bahamas, The"      -> "The Bahamas",
+        "Population, total" -> "Total population",
+        "Lao PDR"           -> "Lao People's Democratic Republic (Laos)",
+        "St. Vincent and the Grenadines" -> "Saint Vincent and the Grenadines",
+        "St. Lucia"                      -> "Saint Lucia",
+        "St. Kitts and Nevis"            -> "Saint Kitts and Nevis"
+      )
+      val strippedStr: String = str.strip()
+      exceptions.getOrElse(strippedStr, rule(strippedStr))

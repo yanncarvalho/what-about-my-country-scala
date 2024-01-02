@@ -8,7 +8,7 @@ import scala.concurrent.duration.Duration
 @main def main(): Unit =
   given system: ActorSystem = ActorSystem()
   given executionContext: ExecutionContextExecutor = system.dispatcher
-  val result = ExternalApi.getKeyAndNameFromNet
+  val result = ExternalApi.getFromNetIndicator("BR")
   result.onComplete{
     println(_)
   }

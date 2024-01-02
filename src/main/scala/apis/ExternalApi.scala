@@ -3,7 +3,14 @@ package apis
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
-import models.{Country, CountryKeyAndName, CountryKeyAndNameResponse, CountryResponse, PaginationResponse}
+import models.{
+  Country,
+  Indicator,
+  CountryKeyAndName,
+  CountryKeyAndNameResponse,
+  CountryResponse,
+  PaginationResponse
+}
 import spray.json.*
 import utils.JsonUnmarshal.given
 
@@ -49,10 +56,15 @@ object ExternalApi:
             RuntimeException(s"Request failed with status: ${res.status}")
           )
       )
-  def getFromNet(key: String): Future[Country] = {
-      val resp = getRequestWBankAPI[CountryResponse](
-        "api.worldbank.org/v2/",
-        Seq(s"country/$key")
-      )
-      resp.head.map(_.countries).map(_.head)
-   }
+  def getFromNet(key: String): Future[Country] =
+    val resp = getRequestWBankAPI[CountryResponse](
+      "api.worldbank.org/v2/",
+      Seq(s"country/$key")
+    )
+    resp.head.map(_.countries).map(_.head)
+
+  def getFromNetIndicator(key: String): Future[Indicator] =
+    getRequestWBankAPI[Indicator](
+      "api.worldbank.org/v2/",
+      Seq(s"country/$key/indicator/SP.POP.TOTL")
+    ).head

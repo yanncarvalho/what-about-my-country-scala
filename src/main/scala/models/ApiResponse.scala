@@ -26,4 +26,10 @@ final case class Country(
     region: String,
     incomeLevel: String
 )
-final case class CountrySubInfo(id: String, iso2code: String, value: String)
+
+final case class Datum(year: Int, value: String)
+final case class Indicator(id: String, description: String, data: Seq[Datum])
+
+final case class IndicatorResponse(indicator: Indicator)
+
+final case class BaseIndicatorInfo(id: String, description : String)
